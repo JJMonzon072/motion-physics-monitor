@@ -1,0 +1,10 @@
+{
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic",
+  "include": ["src", "app.py", "tests"],
+  "exclude": ["**/__pycache__", ".venv", "data"],
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "none",
+  "reportUnusedImport": "information",
+  "reportUnusedVariable": "information"
+}
