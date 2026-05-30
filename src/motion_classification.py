@@ -72,9 +72,9 @@ def classify_motion(
     """
     # Drop NaN rows for regression
     mask = ~(position.isna() | velocity.isna() | acceleration.isna())
-    t = time[mask]
-    pos = position[mask].values.astype(float)
-    vel = velocity[mask].values.astype(float)
+    t = np.asarray(time[mask], dtype=float)
+    pos = np.asarray(position[mask], dtype=float)
+    vel = np.asarray(velocity[mask], dtype=float)
 
     if len(t) < 5:
         return ClassificationResult(
@@ -85,7 +85,7 @@ def classify_motion(
 
     # --- Free-fall check (calibrated): compare vertical accel against g ---
     if calibrated and vy is not None:
-        vy_clean = vy[mask].values.astype(float)
+        vy_clean = np.asarray(vy[mask], dtype=float)
         ay_coeffs = np.polyfit(t, vy_clean, 1)
         ay_exp = abs(ay_coeffs[0])  # slope of vy vs t = vertical acceleration
         if abs(ay_exp - GRAVITY) / GRAVITY < FREE_FALL_TOLERANCE:
@@ -104,9 +104,9 @@ def classify_motion(
     # --- Free-fall check (uncalibrated): parabolic fit on vertical position ---
     if y_position is not None:
         y_mask = ~y_position.isna() & mask
-        if y_mask.sum() >= 5:
-            y_vals = y_position[y_mask].values.astype(float)
-            t_y = time[y_mask]
+        if int(y_mask.sum()) >= 5:
+            y_vals = np.asarray(y_position[y_mask], dtype=float)
+            t_y = np.asarray(time[y_mask], dtype=float)
             r2_y_quad = _quadratic_r2(t_y, y_vals)
             r2_y_lin = _linear_r2(t_y, y_vals)
             # Parabolic fit clearly better than linear → likely free fall.

@@ -70,13 +70,13 @@ def test_build_time_array_invalid_fps():
 def test_compute_positions_calibrated():
     df = compute_positions([100.0, 200.0, 300.0], [0.0, 0.0, 0.0], meters_per_pixel=0.01)
     assert "x_m" in df.columns
-    np.testing.assert_allclose(df["x_m"].values, [1.0, 2.0, 3.0])
+    np.testing.assert_allclose(_col(df, "x_m").to_numpy(), [1.0, 2.0, 3.0])
 
 
 def test_compute_positions_no_calibration():
     df = compute_positions([100.0, 200.0], [50.0, 60.0], meters_per_pixel=None)
-    assert df["x_m"].isna().all()
-    assert df["y_m"].isna().all()
+    assert bool(_col(df, "x_m").isna().all())
+    assert bool(_col(df, "y_m").isna().all())
 
 
 def test_compute_positions_with_none():
@@ -102,7 +102,7 @@ def test_velocity_2d_resultant():
     t = np.arange(0, 2.0, 1 / fps)
     x = pd.Series(3.0 * t)
     y = pd.Series(np.zeros(len(t)))
-    vx, vy, speed = compute_velocity_2d(x, y, t, smooth_window=1)
+    _vx, _vy, speed = compute_velocity_2d(x, y, t, smooth_window=1)
     np.testing.assert_allclose(speed.iloc[5:-5].mean(), 3.0, rtol=0.05)
 
 
@@ -238,11 +238,18 @@ def test_validate_interpretation_high_error():
 # ── Classification ────────────────────────────────────────────────────────────
 
 
+def _col(df: pd.DataFrame, col: str) -> pd.Series:
+    return pd.Series(df[col])
+
+
 def test_classify_mru_from_simulation():
     """Simulated MRU data should classify as MRU."""
     df = simulate_mru(v0=2.0, total_time=3.0)
     result = classify_motion(
-        df["time_s"].values, df["position_m"], df["speed_m_s"], df["acceleration_m_s2"]
+        _col(df, "time_s").to_numpy(),
+        _col(df, "position_m"),
+        _col(df, "speed_m_s"),
+        _col(df, "acceleration_m_s2"),
     )
     assert result.movement_type == "MRU"
 
@@ -251,7 +258,10 @@ def test_classify_mruv_from_simulation():
     """Simulated MRUV data should classify as MRUV."""
     df = simulate_mruv(v0=0.0, a0=3.0, total_time=3.0)
     result = classify_motion(
-        df["time_s"].values, df["position_m"], df["speed_m_s"], df["acceleration_m_s2"]
+        _col(df, "time_s").to_numpy(),
+        _col(df, "position_m"),
+        _col(df, "speed_m_s"),
+        _col(df, "acceleration_m_s2"),
     )
     assert result.movement_type == "MRUV"
 
@@ -260,11 +270,11 @@ def test_classify_free_fall_uncalibrated_via_y_position():
     """Free fall should be detected via parabolic y_position even without calibration."""
     df = simulate_free_fall(y0=10.0, v0=0.0, g=9.8)
     result = classify_motion(
-        df["time_s"].values,
-        df["position_m"],
-        df["speed_m_s"],
-        df["acceleration_m_s2"],
-        y_position=df["y_m"],
+        _col(df, "time_s").to_numpy(),
+        _col(df, "position_m"),
+        _col(df, "speed_m_s"),
+        _col(df, "acceleration_m_s2"),
+        y_position=_col(df, "y_m"),
         calibrated=False,
     )
     assert result.movement_type == "Caída Libre"
@@ -274,11 +284,11 @@ def test_classify_free_fall_calibrated():
     """Free fall with calibration should be detected via vertical acceleration."""
     df = simulate_free_fall(y0=10.0, v0=0.0, g=9.8)
     result = classify_motion(
-        df["time_s"].values,
-        df["position_m"],
-        df["speed_m_s"],
-        df["acceleration_m_s2"],
-        vy=df["vy_m_s"],
+        _col(df, "time_s").to_numpy(),
+        _col(df, "position_m"),
+        _col(df, "speed_m_s"),
+        _col(df, "acceleration_m_s2"),
+        vy=_col(df, "vy_m_s"),
         calibrated=True,
     )
     assert result.movement_type == "Caída Libre"
@@ -287,5 +297,5 @@ def test_classify_free_fall_calibrated():
 def test_free_fall_simulation_uses_y_m():
     """Free fall simulation must store height in y_m, not x_m."""
     df = simulate_free_fall(y0=5.0)
-    assert df["y_m"].iloc[0] == pytest.approx(5.0, abs=0.1)
-    assert (df["x_m"] == 0.0).all()
+    assert _col(df, "y_m").iloc[0] == pytest.approx(5.0, abs=0.1)
+    assert (_col(df, "x_m") == 0.0).all()

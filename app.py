@@ -10,6 +10,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 # ── page config ───────────────────────────────────────────────────────────────
@@ -297,6 +298,11 @@ st.markdown(
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+def _s(df: pd.DataFrame, col: str) -> pd.Series:
+    """Return df[col] as pd.Series; silences Pyright's Series|DataFrame ambiguity."""
+    return pd.Series(df[col])
+
+
 def page_header(title: str, subtitle: str = "") -> None:
     sub = f"<div class='subtitle'>{subtitle}</div>" if subtitle else ""
     st.markdown(
@@ -637,9 +643,11 @@ elif page == "Procesar Video":
     if st.session_state.get("video_info") is None:
         notice("Primero carga un video en la seccion <strong>Cargar Video</strong>.", "warn")
     else:
+        from src.tracking import TrackingConfig
+
         info = st.session_state["video_info"]
-        cfg = st.session_state.get("tracking_cfg")
-        skip = st.session_state.get("skip_frames", 1)
+        cfg: TrackingConfig | None = st.session_state.get("tracking_cfg")
+        skip: int = st.session_state.get("skip_frames", 1)
 
         col_info, col_btn = st.columns([3, 1])
         with col_info:
@@ -657,8 +665,15 @@ elif page == "Procesar Video":
         spacer(16)
 
         if st.button("Analizar Video", use_container_width=True):
-            mpp = st.session_state.get("meters_per_pixel")
-            calibrated = st.session_state.get("calibrated", False)
+            if cfg is None:
+                notice(
+                    "Configura primero el color del objeto en <strong>Cargar Video</strong>.",
+                    "warn",
+                )
+                st.stop()
+
+            mpp: float | None = st.session_state.get("meters_per_pixel")
+            calibrated: bool = st.session_state.get("calibrated", False)
 
             x_list: list[float | None] = []
             y_list: list[float | None] = []
@@ -711,12 +726,12 @@ elif page == "Procesar Video":
 
             frame_height = info.height
             if calibrated:
-                pos_df["y_m"] = frame_height * (mpp or 1) - pos_df["y_m"]
+                pos_df["y_m"] = frame_height * (mpp or 1) - _s(pos_df, "y_m")
             else:
-                pos_df["y_px"] = frame_height - pos_df["y_px"]
+                pos_df["y_px"] = frame_height - _s(pos_df, "y_px")
 
-            x_use = pos_df["x_m"] if calibrated else pos_df["x_px"]
-            y_use = pos_df["y_m"] if calibrated else pos_df["y_px"]
+            x_use: pd.Series = _s(pos_df, "x_m") if calibrated else _s(pos_df, "x_px")
+            y_use: pd.Series = _s(pos_df, "y_m") if calibrated else _s(pos_df, "y_px")
 
             dist = compute_distance(x_use, y_use)
             vx, vy, speed = compute_velocity_2d(x_use, y_use, time_arr)
@@ -736,10 +751,10 @@ elif page == "Procesar Video":
             results_df = build_results_dataframe(
                 frames=frame_ids,
                 time=time_arr,
-                x_px=pos_df["x_px"],
-                y_px=pos_df["y_px"],
-                x_m=pos_df["x_m"],
-                y_m=pos_df["y_m"],
+                x_px=_s(pos_df, "x_px"),
+                y_px=_s(pos_df, "y_px"),
+                x_m=_s(pos_df, "x_m"),
+                y_m=_s(pos_df, "y_m"),
                 distance=dist,
                 vx=vx,
                 vy=vy,
@@ -773,13 +788,15 @@ elif page == "Procesar Video":
 elif page == "Analisis Fisico":
     page_header("Analisis Fisico", "Metricas cinematicas calculadas a partir del rastreo")
 
+    from src.motion_classification import ClassificationResult
+
     results_df = st.session_state.get("results_df")
-    summary = st.session_state.get("summary")
-    classification = st.session_state.get("classification")
-    calibrated = st.session_state.get("calibrated", False)
+    summary: dict | None = st.session_state.get("summary")
+    classification: ClassificationResult | None = st.session_state.get("classification")
+    calibrated: bool = st.session_state.get("calibrated", False)
     unit = "m" if calibrated else "px"
 
-    if results_df is None:
+    if results_df is None or summary is None or classification is None:
         notice(
             "No hay datos disponibles. Procesa un video o ejecuta una simulacion primero.",
             "warn",
@@ -926,10 +943,13 @@ elif page == "Simulacion":
         if st.button("Generar simulacion MRU", use_container_width=True):
             df = simulate_mru(v0=v0, x0=x0, total_time=total_t)
             summary = compute_summary_stats(
-                df["speed_m_s"], df["acceleration_m_s2"], df["distance_m"]
+                _s(df, "speed_m_s"), _s(df, "acceleration_m_s2"), _s(df, "distance_m")
             )
             cls = classify_motion(
-                df["time_s"].values, df["position_m"], df["speed_m_s"], df["acceleration_m_s2"]
+                _s(df, "time_s").to_numpy(),
+                _s(df, "position_m"),
+                _s(df, "speed_m_s"),
+                _s(df, "acceleration_m_s2"),
             )
             st.session_state.update(
                 {
@@ -957,10 +977,13 @@ elif page == "Simulacion":
         if st.button("Generar simulacion MRUV", use_container_width=True):
             df = simulate_mruv(v0=v0, a0=a0, x0=x0, total_time=total_t)
             summary = compute_summary_stats(
-                df["speed_m_s"], df["acceleration_m_s2"], df["distance_m"]
+                _s(df, "speed_m_s"), _s(df, "acceleration_m_s2"), _s(df, "distance_m")
             )
             cls = classify_motion(
-                df["time_s"].values, df["position_m"], df["speed_m_s"], df["acceleration_m_s2"]
+                _s(df, "time_s").to_numpy(),
+                _s(df, "position_m"),
+                _s(df, "speed_m_s"),
+                _s(df, "acceleration_m_s2"),
             )
             st.session_state.update(
                 {
@@ -991,7 +1014,7 @@ elif page == "Simulacion":
         if st.button("Generar simulacion Caida Libre", use_container_width=True):
             df = simulate_free_fall(y0=y0, v0=v0, g=g, total_time=total_t_ff)
             summary = compute_summary_stats(
-                df["speed_m_s"], df["acceleration_m_s2"], df["distance_m"]
+                _s(df, "speed_m_s"), _s(df, "acceleration_m_s2"), _s(df, "distance_m")
             )
             cls = ClassificationResult(
                 movement_type="Caida Libre",

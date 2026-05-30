@@ -88,13 +88,11 @@ def simulate_free_fall(
     if total_time is None:
         # Discriminant of y0 + v0·t - ½·g·t² = 0
         disc = v0**2 + 2.0 * g * y0
-        if disc < 0:
-            total_time = 5.0
-        else:
-            t_ground = (v0 + np.sqrt(disc)) / g
-            total_time = max(t_ground, 0.1)
+        duration: float = 5.0 if disc < 0 else max((v0 + np.sqrt(max(disc, 0.0))) / g, 0.1)
+    else:
+        duration = total_time
 
-    t = np.arange(0, total_time + dt, dt)
+    t = np.arange(0, duration + dt, dt)
     y = y0 + v0 * t - 0.5 * g * t**2
 
     # Clip at ground level

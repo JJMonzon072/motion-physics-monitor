@@ -7,6 +7,8 @@ render them with st.plotly_chart(fig, use_container_width=True).
 
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -18,7 +20,8 @@ COLOR_ACC = "#E74C3C"
 COLOR_TRAJ = "#9B59B6"
 FONT_FAMILY = "Inter, Arial, sans-serif"
 
-_LAYOUT_DEFAULTS = dict(
+# Typed as Any so Pyright accepts **_LAYOUT_DEFAULTS in update_layout
+_LAYOUT_DEFAULTS: dict[str, Any] = dict(
     font=dict(family=FONT_FAMILY, size=13),
     paper_bgcolor="#FFFFFF",
     plot_bgcolor="#F8F9FA",
@@ -107,11 +110,14 @@ def plot_trajectory(df: pd.DataFrame, unit: str = "m") -> go.Figure | None:
     x_col = "x_m" if "x_m" in df.columns else "x_px"
     y_col = "y_m" if "y_m" in df.columns else "y_px"
 
-    if df[x_col].isna().all() or df[y_col].isna().all():
+    x_series = pd.Series(df[x_col])
+    y_series = pd.Series(df[y_col])
+
+    if bool(x_series.isna().all()) or bool(y_series.isna().all()):
         return None
 
     # Skip if no meaningful 2D spread
-    if df[x_col].std() < 1e-9 or df[y_col].std() < 1e-9:
+    if (x_series.std() or 0.0) < 1e-9 or (y_series.std() or 0.0) < 1e-9:
         return None
 
     fig = go.Figure()

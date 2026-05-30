@@ -41,8 +41,12 @@ def smooth_series(series: pd.Series, window: int = 3) -> pd.Series:
     """Apply centered rolling mean smoothing; fills edges with nearest values."""
     if len(series) < window:
         return series
-    smoothed = series.rolling(window=window, center=True, min_periods=1).mean()
-    return smoothed
+    # rolling().mean() stubs return DataFrame|Series; re-wrap to guarantee Series
+    return pd.Series(
+        series.rolling(window=window, center=True, min_periods=1).mean(),
+        index=series.index,
+        name=series.name,
+    )
 
 
 def safe_divide(numerator: float, denominator: float, default: float = 0.0) -> float:
