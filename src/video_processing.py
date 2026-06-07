@@ -1,8 +1,8 @@
 """
-Video I/O helpers: reading, metadata extraction, and frame iteration.
+Utilidades de entrada/salida de video: lectura, extracción de metadata e iteración de frames.
 
-OpenCV uses BGR colour order internally; callers receive BGR frames and are
-responsible for any colour-space conversion needed for tracking.
+OpenCV usa el orden de color BGR internamente; los llamadores reciben frames BGR y son
+responsables de cualquier conversión de espacio de color necesaria para el rastreo.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ class VideoInfo:
 
 
 def get_video_info(video_path: str | Path) -> VideoInfo:
-    """Read video metadata without decoding all frames."""
+    """Lee la metadata del video sin decodificar todos los frames."""
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise ValueError(f"No se puede abrir el video: {video_path}")
@@ -60,13 +60,13 @@ def iter_frames(
     max_frames: int = 2000,
 ) -> Generator[tuple[int, np.ndarray], None, None]:
     """
-    Yield (frame_index, bgr_frame) pairs.
+    Genera pares (índice_frame, frame_bgr) de forma iterativa.
 
-    Parameters
+    Parámetros
     ----------
-    video_path : path to the video file.
-    skip       : process every N-th frame (1 = every frame).
-    max_frames : hard cap on frames processed to keep memory reasonable.
+    video_path : ruta al archivo de video.
+    skip       : procesa 1 de cada N frames (1 = todos los frames).
+    max_frames : límite máximo de frames a procesar para controlar el uso de memoria.
     """
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
@@ -88,10 +88,10 @@ def iter_frames(
 
 
 def save_annotated_frame(frame: np.ndarray, output_path: str | Path) -> None:
-    """Save a single annotated BGR frame to disk (PNG)."""
+    """Guarda un frame BGR anotado en disco como PNG."""
     cv2.imwrite(str(output_path), frame)
 
 
 def frame_to_rgb(bgr: np.ndarray) -> np.ndarray:
-    """Convert BGR OpenCV frame to RGB for display in Streamlit."""
+    """Convierte un frame BGR de OpenCV a RGB para mostrarlo en Streamlit."""
     return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)

@@ -1,8 +1,8 @@
 """
-Object tracking via HSV colour segmentation.
+Rastreo de objetos mediante segmentación de color HSV.
 
-Each frame is converted to HSV, a colour mask is created, morphological
-operations clean up noise, and the largest contour's centroid is returned.
+Cada frame se convierte a HSV, se crea una máscara de color, operaciones
+morfológicas eliminan el ruido y se retorna el centroide del contorno más grande.
 """
 
 from __future__ import annotations
@@ -13,9 +13,9 @@ from typing import NamedTuple
 import cv2
 import numpy as np
 
-# Pre-defined colour ranges in HSV (H: 0-179, S: 0-255, V: 0-255)
+# Rangos de color predefinidos en HSV (H: 0-179, S: 0-255, V: 0-255)
 COLOR_PRESETS: dict[str, tuple[tuple[int, int, int], tuple[int, int, int]]] = {
-    "Rojo": ((0, 120, 70), (10, 255, 255)),  # uses two ranges due to hue wrap
+    "Rojo": ((0, 120, 70), (10, 255, 255)),  # usa dos rangos por el desbordamiento del matiz
     "Rojo (alta gama)": ((160, 120, 70), (179, 255, 255)),
     "Azul": ((100, 100, 50), (130, 255, 255)),
     "Verde": ((40, 60, 40), (80, 255, 255)),
@@ -23,7 +23,7 @@ COLOR_PRESETS: dict[str, tuple[tuple[int, int, int], tuple[int, int, int]]] = {
     "Naranja": ((10, 120, 100), (25, 255, 255)),
 }
 
-# Display names shown in the UI dropdown
+# Nombres visibles en el menú desplegable de la interfaz
 PRESET_NAMES = ["Rojo", "Azul", "Verde", "Amarillo", "Naranja", "Personalizado"]
 
 
@@ -46,7 +46,7 @@ class Detection(NamedTuple):
 
 
 def get_config_for_color(color_name: str, min_area: int = 300) -> TrackingConfig:
-    """Build a TrackingConfig for a named preset colour."""
+    """Construye un TrackingConfig para un color predefinido por nombre."""
     if color_name == "Rojo":
         return TrackingConfig(
             color_name="Rojo",
@@ -58,7 +58,7 @@ def get_config_for_color(color_name: str, min_area: int = 300) -> TrackingConfig
         )
     preset = COLOR_PRESETS.get(color_name)
     if preset is None:
-        # Custom or unknown — default to red
+        # Color personalizado o desconocido — usa rojo por defecto
         preset = COLOR_PRESETS["Rojo"]
     lower, upper = preset
     return TrackingConfig(
@@ -72,19 +72,19 @@ def get_config_for_color(color_name: str, min_area: int = 300) -> TrackingConfig
 
 
 def _build_mask(hsv: np.ndarray, cfg: TrackingConfig) -> np.ndarray:
-    """Create binary colour mask from HSV frame."""
+    """Crea la máscara binaria de color a partir de un frame HSV."""
     lower = np.array(cfg.lower_hsv, dtype=np.uint8)
     upper = np.array(cfg.upper_hsv, dtype=np.uint8)
     mask = cv2.inRange(hsv, lower, upper)
 
-    # Red wraps around H=0/179 — merge second range
+    # El rojo desborda en H=0/179 — combinar con el segundo rango
     if cfg.lower_hsv2 is not None and cfg.upper_hsv2 is not None:
         lower2 = np.array(cfg.lower_hsv2, dtype=np.uint8)
         upper2 = np.array(cfg.upper_hsv2, dtype=np.uint8)
         mask2 = cv2.inRange(hsv, lower2, upper2)
         mask = cv2.bitwise_or(mask, mask2)
 
-    # Morphological cleanup
+    # Limpieza morfológica
     k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (cfg.morph_kernel, cfg.morph_kernel))
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, k)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, k)
@@ -93,9 +93,9 @@ def _build_mask(hsv: np.ndarray, cfg: TrackingConfig) -> np.ndarray:
 
 def detect_object(frame: np.ndarray, cfg: TrackingConfig) -> Detection | None:
     """
-    Detect the tracked object in a single BGR frame.
+    Detecta el objeto rastreado en un frame BGR individual.
 
-    Returns a Detection named tuple or None if not found.
+    Retorna una named tuple Detection o None si no se encontró el objeto.
     """
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = _build_mask(hsv, cfg)
@@ -104,14 +104,14 @@ def detect_object(frame: np.ndarray, cfg: TrackingConfig) -> Detection | None:
     if not contours:
         return None
 
-    # Pick largest contour above minimum area threshold
+    # Selecciona el contorno más grande que supere el área mínima
     largest = max(contours, key=cv2.contourArea)
     area = cv2.contourArea(largest)
 
     if area < cfg.min_area:
         return None
 
-    # Centroid via image moments
+    # Centroide mediante momentos de imagen
     M = cv2.moments(largest)
     if M["m00"] == 0:
         return None
@@ -130,18 +130,18 @@ def annotate_frame(
     color: tuple[int, int, int] = (0, 255, 0),
 ) -> np.ndarray:
     """
-    Draw circle, centroid, and trajectory on a copy of the frame.
+    Dibuja círculo, centroide y trayectoria sobre una copia del frame.
 
-    Parameters
+    Parámetros
     ----------
-    frame      : BGR source frame.
-    detection  : current frame detection (may be None).
-    trajectory : list of (x, y) centroids from previous frames.
-    color      : BGR draw colour.
+    frame      : frame BGR de origen.
+    detection  : detección del frame actual (puede ser None).
+    trajectory : lista de centroides (x, y) de frames anteriores.
+    color      : color de dibujo en BGR.
     """
     annotated = frame.copy()
 
-    # Draw trajectory as connected dots
+    # Dibuja la trayectoria como puntos conectados
     for i in range(1, len(trajectory)):
         pt1 = (int(trajectory[i - 1][0]), int(trajectory[i - 1][1]))
         pt2 = (int(trajectory[i][0]), int(trajectory[i][1]))
@@ -150,7 +150,7 @@ def annotate_frame(
     if detection is not None:
         cx, cy, radius = int(detection.x), int(detection.y), int(detection.radius)
         cv2.circle(annotated, (cx, cy), radius, color, 2)
-        cv2.circle(annotated, (cx, cy), 4, (0, 0, 255), -1)  # red centroid dot
+        cv2.circle(annotated, (cx, cy), 4, (0, 0, 255), -1)  # punto rojo en el centroide
         cv2.putText(
             annotated,
             f"({cx}, {cy})",

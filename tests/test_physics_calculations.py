@@ -1,8 +1,8 @@
 """
-Unit tests for physics_calculations module.
+Pruebas unitarias para el módulo physics_calculations.
 
-Verifies correctness of time arrays, velocity, acceleration,
-distance, and summary statistics using known kinematic scenarios.
+Verifica la correctitud de arreglos de tiempo, velocidad, aceleración,
+distancia y estadísticas resumen usando escenarios cinemáticos conocidos.
 """
 
 import numpy as np
@@ -28,16 +28,16 @@ from src.validation import validate_free_fall, validate_mru, validate_mruv
 
 @pytest.fixture
 def mru_data():
-    """Uniform motion: x = 2t, v = 2 m/s, a = 0."""
+    """MRU: x = 2t, v = 2 m/s, a = 0."""
     fps = 30.0
     t = np.arange(0, 3.0, 1 / fps)
-    x = 2.0 * t  # v = 2 m/s
+    x = 2.0 * t  # velocidad constante 2 m/s
     return t, x
 
 
 @pytest.fixture
 def mruv_data():
-    """Uniformly accelerated: x = 0.5*a*t^2, v = a*t, a = 4 m/s²."""
+    """MRUV: x = 0.5·a·t², v = a·t, a = 4 m/s²."""
     fps = 30.0
     t = np.arange(0, 3.0, 1 / fps)
     a = 4.0
@@ -88,16 +88,16 @@ def test_compute_positions_with_none():
 
 
 def test_velocity_mru(mru_data):
-    """MRU: velocity should be approximately constant at 2 m/s."""
+    """MRU: la velocidad debe ser aproximadamente constante a 2 m/s."""
     t, x = mru_data
     x_series = pd.Series(x)
     vel = compute_velocity(x_series, t, smooth_window=1)
-    # Ignore first point (boundary effect); check bulk
+    # Ignora el primer punto (efecto de borde); verifica el núcleo de la serie
     np.testing.assert_allclose(vel.iloc[5:-5].mean(), 2.0, rtol=0.05)
 
 
 def test_velocity_2d_resultant():
-    """Resultant speed equals scalar velocity for 1-D motion."""
+    """La rapidez resultante debe ser igual a la velocidad escalar para movimiento 1-D."""
     fps = 10.0
     t = np.arange(0, 2.0, 1 / fps)
     x = pd.Series(3.0 * t)
@@ -110,12 +110,12 @@ def test_velocity_2d_resultant():
 
 
 def test_acceleration_mruv(mruv_data):
-    """MRUV: average acceleration should be close to 4 m/s²."""
+    """MRUV: la aceleración promedio debe aproximarse a 4 m/s²."""
     t, x, expected_a = mruv_data
     x_series = pd.Series(x)
     vel = compute_velocity(x_series, t, smooth_window=3)
     acc = compute_acceleration(vel, t, smooth_window=5)
-    # Check bulk (skip transients at edges)
+    # Verifica el núcleo (omite transitorios en los bordes)
     mean_acc = acc.iloc[10:-10].mean()
     assert (
         abs(mean_acc - expected_a) / expected_a < 0.10
@@ -123,7 +123,7 @@ def test_acceleration_mruv(mruv_data):
 
 
 def test_acceleration_mru_near_zero(mru_data):
-    """MRU: acceleration should be close to zero."""
+    """MRU: la aceleración debe ser cercana a cero."""
     t, x = mru_data
     x_series = pd.Series(x)
     vel = compute_velocity(x_series, t, smooth_window=3)
@@ -135,7 +135,7 @@ def test_acceleration_mru_near_zero(mru_data):
 
 
 def test_distance_linear():
-    """Straight-line motion: distance = final_pos - initial_pos."""
+    """Movimiento lineal: distancia = posición_final - posición_inicial."""
     x = pd.Series([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
     y = pd.Series([0.0] * 6)
     d = compute_distance(x, y)
@@ -143,7 +143,7 @@ def test_distance_linear():
 
 
 def test_distance_always_non_decreasing():
-    """Distance should never decrease."""
+    """La distancia acumulada nunca debe decrecer."""
     x = pd.Series([0.0, 1.0, 0.5, 1.5, 1.0, 2.0])
     y = pd.Series([0.0] * 6)
     d = compute_distance(x, y)
@@ -199,7 +199,7 @@ def test_smooth_series():
     s = pd.Series([1.0, 3.0, 5.0, 7.0, 9.0])
     smooth = smooth_series(s, window=3)
     assert len(smooth) == len(s)
-    # Middle value should be average of neighbours
+    # El valor central debe ser el promedio de sus vecinos
     assert abs(smooth.iloc[2] - 5.0) < 0.1
 
 
@@ -243,7 +243,7 @@ def _col(df: pd.DataFrame, col: str) -> pd.Series:
 
 
 def test_classify_mru_from_simulation():
-    """Simulated MRU data should classify as MRU."""
+    """Los datos simulados de MRU deben clasificarse como MRU."""
     df = simulate_mru(v0=2.0, total_time=3.0)
     result = classify_motion(
         _col(df, "time_s").to_numpy(),
@@ -255,7 +255,7 @@ def test_classify_mru_from_simulation():
 
 
 def test_classify_mruv_from_simulation():
-    """Simulated MRUV data should classify as MRUV."""
+    """Los datos simulados de MRUV deben clasificarse como MRUV."""
     df = simulate_mruv(v0=0.0, a0=3.0, total_time=3.0)
     result = classify_motion(
         _col(df, "time_s").to_numpy(),
@@ -267,7 +267,7 @@ def test_classify_mruv_from_simulation():
 
 
 def test_classify_free_fall_uncalibrated_via_y_position():
-    """Free fall should be detected via parabolic y_position even without calibration."""
+    """La caída libre debe detectarse mediante y_position parabólico aun sin calibración."""
     df = simulate_free_fall(y0=10.0, v0=0.0, g=9.8)
     result = classify_motion(
         _col(df, "time_s").to_numpy(),
@@ -281,7 +281,7 @@ def test_classify_free_fall_uncalibrated_via_y_position():
 
 
 def test_classify_free_fall_calibrated():
-    """Free fall with calibration should be detected via vertical acceleration."""
+    """La caída libre calibrada debe detectarse mediante la aceleración vertical."""
     df = simulate_free_fall(y0=10.0, v0=0.0, g=9.8)
     result = classify_motion(
         _col(df, "time_s").to_numpy(),
@@ -295,7 +295,7 @@ def test_classify_free_fall_calibrated():
 
 
 def test_free_fall_simulation_uses_y_m():
-    """Free fall simulation must store height in y_m, not x_m."""
+    """La simulación de caída libre debe almacenar la altura en y_m, no en x_m."""
     df = simulate_free_fall(y0=5.0)
     assert _col(df, "y_m").iloc[0] == pytest.approx(5.0, abs=0.1)
     assert (_col(df, "x_m") == 0.0).all()

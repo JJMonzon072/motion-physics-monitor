@@ -1,9 +1,9 @@
 """
-Classify detected motion as MRU, MRUV, or free fall.
+Clasifica el movimiento detectado como MRU, MRUV o Caída Libre.
 
-Classification uses least-squares regression on the velocity and position
-series to detect linearity/quadratic trends, and checks the vertical
-acceleration against g when calibration is available.
+La clasificación usa regresión por mínimos cuadrados sobre las series de velocidad
+y posición para detectar tendencias lineales/cuadráticas, y compara la aceleración
+vertical contra g cuando la calibración está disponible.
 """
 
 from __future__ import annotations
@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 
 GRAVITY = 9.8  # m/s²
-FREE_FALL_TOLERANCE = 0.35  # fraction: experimental g must be within 35% of 9.8
-MRU_ACCEL_THRESHOLD = 0.15  # max CV of speed to call it MRU (real video is noisy)
+FREE_FALL_TOLERANCE = 0.35  # fracción: g experimental debe estar dentro del 35% de 9.8
+MRU_ACCEL_THRESHOLD = 0.15  # CV máximo de la velocidad para clasificar como MRU (video real es ruidoso)
 
 
 @dataclass
@@ -34,14 +34,14 @@ def _r_squared(y: np.ndarray, y_fit: np.ndarray) -> float:
 
 
 def _linear_r2(x: np.ndarray, y: np.ndarray) -> float:
-    """R² of a linear least-squares fit."""
+    """R² de un ajuste lineal por mínimos cuadrados."""
     coeffs = np.polyfit(x, y, 1)
     y_fit = np.polyval(coeffs, x)
     return _r_squared(y, y_fit)
 
 
 def _quadratic_r2(x: np.ndarray, y: np.ndarray) -> float:
-    """R² of a quadratic least-squares fit."""
+    """R² de un ajuste cuadrático por mínimos cuadrados."""
     coeffs = np.polyfit(x, y, 2)
     y_fit = np.polyval(coeffs, x)
     return _r_squared(y, y_fit)
@@ -57,20 +57,19 @@ def classify_motion(
     calibrated: bool = False,
 ) -> ClassificationResult:
     """
-    Classify movement from kinematic time series.
+    Clasifica el movimiento a partir de series temporales cinemáticas.
 
-    Parameters
+    Parámetros
     ----------
-    time       : time array in seconds.
-    position   : resultant (scalar) position used for MRU/MRUV regression.
-    velocity   : resultant speed series.
-    acceleration : resultant acceleration series.
-    vy         : vertical velocity component (used for calibrated free-fall check).
-    y_position : vertical position series (used for parabolic free-fall check
-                 even without calibration).
-    calibrated : whether position/acceleration are in SI units (metres).
+    time         : arreglo de tiempo en segundos.
+    position     : posición resultante (escalar) usada para la regresión MRU/MRUV.
+    velocity     : serie de rapidez resultante.
+    acceleration : serie de aceleración resultante.
+    vy           : componente vertical de velocidad (para verificación de caída libre calibrada).
+    y_position   : serie de posición vertical (para verificación parabólica sin calibración).
+    calibrated   : indica si la posición/aceleración están en unidades SI (metros).
     """
-    # Drop NaN rows for regression
+    # Elimina filas NaN antes de la regresión
     mask = ~(position.isna() | velocity.isna() | acceleration.isna())
     t = np.asarray(time[mask], dtype=float)
     pos = np.asarray(position[mask], dtype=float)
@@ -83,7 +82,7 @@ def classify_motion(
             explanation="Datos insuficientes para clasificar el movimiento (menos de 5 puntos detectados).",
         )
 
-    # --- Free-fall check (calibrated): compare vertical accel against g ---
+    # --- Verificación de caída libre (calibrada): compara aceleración vertical con g ---
     if calibrated and vy is not None:
         vy_clean = np.asarray(vy[mask], dtype=float)
         ay_coeffs = np.polyfit(t, vy_clean, 1)
@@ -101,7 +100,7 @@ def classify_motion(
                 ),
             )
 
-    # --- Free-fall check (uncalibrated): parabolic fit on vertical position ---
+    # --- Verificación de caída libre (sin calibrar): ajuste parabólico en posición vertical ---
     if y_position is not None:
         y_mask = ~y_position.isna() & mask
         if int(y_mask.sum()) >= 5:
@@ -109,9 +108,9 @@ def classify_motion(
             t_y = np.asarray(time[y_mask], dtype=float)
             r2_y_quad = _quadratic_r2(t_y, y_vals)
             r2_y_lin = _linear_r2(t_y, y_vals)
-            # Parabolic fit clearly better than linear → likely free fall.
-            # Threshold 0.05 accounts for the fact that a parabola can have
-            # R²_linear ≈ 0.93 even for a clean quadratic curve.
+            # Ajuste parabólico claramente mejor que lineal → probablemente caída libre.
+            # El umbral 0.02 considera que una parábola puede tener
+            # R²_lineal ≈ 0.93 incluso para una curva cuadrática limpia.
             if r2_y_quad > 0.75 and (r2_y_quad - r2_y_lin) > 0.02:
                 conf = "Alta" if r2_y_quad > 0.92 else "Media"
                 return ClassificationResult(
@@ -125,18 +124,18 @@ def classify_motion(
                     ),
                 )
 
-    # --- MRU / MRUV via R² comparison ---
+    # --- MRU / MRUV mediante comparación de R² ---
     r2_pos_linear = _linear_r2(t, pos)
     r2_vel_linear = _linear_r2(t, vel)
     r2_pos_quad = _quadratic_r2(t, pos)
 
-    # Use velocity coefficient of variation to distinguish MRU (constant v) from MRUV.
-    # acc_std_norm is unreliable: both constant-zero (MRU) and constant-nonzero (MRUV)
-    # accelerations give std ≈ 0 for ideal/simulated data.
+    # Usa el coeficiente de variación de velocidad para distinguir MRU (v constante) de MRUV.
+    # acc_std_norm no es confiable: aceleraciones constante-cero (MRU) y constante-nonzero (MRUV)
+    # dan std ≈ 0 para datos ideales o simulados.
     vel_mean = abs(float(np.mean(vel)))
     vel_cv = float(np.std(vel)) / (vel_mean + 1e-9)  # CV of speed
 
-    # MRU: velocity nearly constant (low CV) AND position linear
+    # MRU: velocidad casi constante (CV bajo) Y posición lineal
     if vel_cv < MRU_ACCEL_THRESHOLD and r2_pos_linear > 0.90:
         conf = "Alta" if r2_pos_linear > 0.95 else "Media"
         return ClassificationResult(
@@ -150,7 +149,7 @@ def classify_motion(
             ),
         )
 
-    # MRUV: constant acceleration → velocity is linear, position is quadratic
+    # MRUV: aceleración constante → velocidad lineal, posición cuadrática
     if r2_vel_linear > 0.75 and r2_pos_quad > 0.75:
         conf = "Alta" if (r2_vel_linear > 0.90 and r2_pos_quad > 0.90) else "Media"
         return ClassificationResult(
@@ -163,7 +162,7 @@ def classify_motion(
             ),
         )
 
-    # Undetermined if no pattern is clear
+    # Sin patrón claro → indeterminado
     return ClassificationResult(
         movement_type="Indeterminado",
         confidence="Baja",

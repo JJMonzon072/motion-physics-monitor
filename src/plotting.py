@@ -1,8 +1,8 @@
 """
-Interactive Plotly charts for kinematic analysis.
+Gráficas interactivas Plotly para análisis cinemático.
 
-All functions return a plotly.graph_objects.Figure so that Streamlit can
-render them with st.plotly_chart(fig, use_container_width=True).
+Todas las funciones retornan un plotly.graph_objects.Figure para que Streamlit
+pueda renderizarlas con st.plotly_chart(fig, use_container_width=True).
 """
 
 from __future__ import annotations
@@ -13,14 +13,14 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# Shared colour palette
+# Paleta de colores compartida
 COLOR_POS = "#4A90D9"
 COLOR_VEL = "#27AE60"
 COLOR_ACC = "#E74C3C"
 COLOR_TRAJ = "#9B59B6"
 FONT_FAMILY = "Inter, Arial, sans-serif"
 
-# Typed as Any so Pyright accepts **_LAYOUT_DEFAULTS in update_layout
+# Tipado como Any para que Pyright acepte **_LAYOUT_DEFAULTS en update_layout
 _LAYOUT_DEFAULTS: dict[str, Any] = dict(
     font=dict(family=FONT_FAMILY, size=13),
     paper_bgcolor="#FFFFFF",
@@ -31,13 +31,14 @@ _LAYOUT_DEFAULTS: dict[str, Any] = dict(
 
 
 def _apply_grid(fig: go.Figure) -> go.Figure:
+    """Aplica estilo consistente de cuadrícula y línea cero a todos los ejes."""
     fig.update_xaxes(showgrid=True, gridcolor="#E0E0E0", zeroline=True, zerolinecolor="#CCCCCC")
     fig.update_yaxes(showgrid=True, gridcolor="#E0E0E0", zeroline=True, zerolinecolor="#CCCCCC")
     return fig
 
 
 def plot_position(df: pd.DataFrame, unit: str = "m") -> go.Figure:
-    """Position vs time chart."""
+    """Gráfica de Posición vs Tiempo."""
     pos_col = "position_m" if "position_m" in df.columns else "position_px"
     fig = go.Figure()
     fig.add_trace(
@@ -60,7 +61,7 @@ def plot_position(df: pd.DataFrame, unit: str = "m") -> go.Figure:
 
 
 def plot_velocity(df: pd.DataFrame, unit: str = "m/s") -> go.Figure:
-    """Speed vs time chart."""
+    """Gráfica de Velocidad vs Tiempo."""
     spd_col = "speed_m_s" if "speed_m_s" in df.columns else "speed_px_s"
     fig = go.Figure()
     fig.add_trace(
@@ -83,7 +84,7 @@ def plot_velocity(df: pd.DataFrame, unit: str = "m/s") -> go.Figure:
 
 
 def plot_acceleration(df: pd.DataFrame, unit: str = "m/s²") -> go.Figure:
-    """Acceleration vs time chart."""
+    """Gráfica de Aceleración vs Tiempo."""
     acc_col = "acceleration_m_s2" if "acceleration_m_s2" in df.columns else "acceleration_px_s2"
     fig = go.Figure()
     fig.add_trace(
@@ -106,7 +107,7 @@ def plot_acceleration(df: pd.DataFrame, unit: str = "m/s²") -> go.Figure:
 
 
 def plot_trajectory(df: pd.DataFrame, unit: str = "m") -> go.Figure | None:
-    """2-D trajectory chart (x vs y). Returns None if data is 1-D only."""
+    """Gráfica de trayectoria 2D (x vs y). Retorna None si los datos son solo 1-D."""
     x_col = "x_m" if "x_m" in df.columns else "x_px"
     y_col = "y_m" if "y_m" in df.columns else "y_px"
 
@@ -116,7 +117,7 @@ def plot_trajectory(df: pd.DataFrame, unit: str = "m") -> go.Figure | None:
     if bool(x_series.isna().all()) or bool(y_series.isna().all()):
         return None
 
-    # Skip if no meaningful 2D spread
+    # Omite si no hay dispersión 2D significativa
     if (x_series.std() or 0.0) < 1e-9 or (y_series.std() or 0.0) < 1e-9:
         return None
 
@@ -147,7 +148,7 @@ def plot_trajectory(df: pd.DataFrame, unit: str = "m") -> go.Figure | None:
 
 
 def plot_combined_dashboard(df: pd.DataFrame, unit: str = "m") -> go.Figure:
-    """Combined 2×2 subplot with position, velocity, acceleration and trajectory."""
+    """Panel combinado 2×2 con posición, velocidad, aceleración y trayectoria."""
     pos_col = "position_m" if "position_m" in df.columns else "position_px"
     spd_col = "speed_m_s" if "speed_m_s" in df.columns else "speed_px_s"
     acc_col = "acceleration_m_s2" if "acceleration_m_s2" in df.columns else "acceleration_px_s2"

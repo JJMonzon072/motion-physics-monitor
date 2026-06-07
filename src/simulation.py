@@ -1,8 +1,8 @@
 """
-Generate synthetic kinematic data for MRU, MRUV, and free fall.
+Generador de datos cinemáticos sintéticos para MRU, MRUV y Caída Libre.
 
-The resulting DataFrame has the same schema as the video-analysis output
-so it can be fed directly into plotting and validation modules.
+El DataFrame resultante tiene el mismo esquema que la salida del análisis de video,
+por lo que puede alimentarse directamente a los módulos de graficación y validación.
 """
 
 from __future__ import annotations
@@ -20,14 +20,14 @@ def simulate_mru(
     dt: float = 0.05,
 ) -> pd.DataFrame:
     """
-    Simulate Uniform Rectilinear Motion (MRU): x = x0 + v0·t.
+    Simula Movimiento Rectilíneo Uniforme (MRU): x = x0 + v0·t.
 
-    Parameters
+    Parámetros
     ----------
-    v0         : constant velocity [m/s].
-    x0         : initial position [m].
-    total_time : duration of simulation [s].
-    dt         : time step [s].
+    v0         : velocidad constante [m/s].
+    x0         : posición inicial [m].
+    total_time : duración de la simulación [s].
+    dt         : paso de tiempo [s].
     """
     t = np.arange(0, total_time + dt, dt)
     x = x0 + v0 * t
@@ -45,16 +45,16 @@ def simulate_mruv(
     dt: float = 0.05,
 ) -> pd.DataFrame:
     """
-    Simulate Uniformly Accelerated Rectilinear Motion (MRUV):
+    Simula Movimiento Rectilíneo Uniformemente Variado (MRUV):
     x = x0 + v0·t + ½·a·t²,  v = v0 + a·t.
 
-    Parameters
+    Parámetros
     ----------
-    v0         : initial velocity [m/s].
-    a0         : constant acceleration [m/s²].
-    x0         : initial position [m].
-    total_time : duration [s].
-    dt         : time step [s].
+    v0         : velocidad inicial [m/s].
+    a0         : aceleración constante [m/s²].
+    x0         : posición inicial [m].
+    total_time : duración [s].
+    dt         : paso de tiempo [s].
     """
     t = np.arange(0, total_time + dt, dt)
     x = x0 + v0 * t + 0.5 * a0 * t**2
@@ -72,21 +72,21 @@ def simulate_free_fall(
     dt: float = 0.05,
 ) -> pd.DataFrame:
     """
-    Simulate free fall: y = y0 + v0·t - ½·g·t²  (Y up = positive).
+    Simula Caída Libre: y = y0 + v0·t - ½·g·t²  (Y hacia arriba = positivo).
 
-    Simulation stops automatically when the object hits the ground (y ≤ 0)
-    unless total_time is specified.
+    La simulación se detiene automáticamente cuando el objeto llega al suelo (y ≤ 0)
+    a menos que se especifique total_time.
 
-    Parameters
+    Parámetros
     ----------
-    y0         : initial height [m].
-    v0         : initial vertical velocity [m/s] (positive = upward).
-    g          : gravitational acceleration [m/s²].
-    total_time : override automatic stop [s].
-    dt         : time step [s].
+    y0         : altura inicial [m].
+    v0         : velocidad vertical inicial [m/s] (positivo = hacia arriba).
+    g          : aceleración gravitacional [m/s²].
+    total_time : sobrescribe la parada automática [s].
+    dt         : paso de tiempo [s].
     """
     if total_time is None:
-        # Discriminant of y0 + v0·t - ½·g·t² = 0
+        # Discriminante de y0 + v0·t - ½·g·t² = 0
         disc = v0**2 + 2.0 * g * y0
         duration: float = 5.0 if disc < 0 else max((v0 + np.sqrt(max(disc, 0.0))) / g, 0.1)
     else:
@@ -114,7 +114,7 @@ def _build_dataframe(
     acceleration: np.ndarray,
     movement_type: str,
 ) -> pd.DataFrame:
-    """Assemble a standardised DataFrame for horizontal 1-D motion (MRU/MRUV)."""
+    """Construye un DataFrame estandarizado para movimiento horizontal 1-D (MRU/MRUV)."""
     distance = np.concatenate([[0.0], np.cumsum(np.abs(np.diff(position)))])
 
     return pd.DataFrame(
@@ -142,10 +142,10 @@ def _build_dataframe_vertical(
     movement_type: str,
 ) -> pd.DataFrame:
     """
-    Assemble a standardised DataFrame for vertical motion (free fall).
+    Construye un DataFrame estandarizado para movimiento vertical (caída libre).
 
-    Uses y_m for the vertical position so that plotting and classification
-    correctly detect the parabolic shape along the vertical axis.
+    Usa y_m para la posición vertical de modo que graficación y clasificación
+    detecten correctamente la forma parabólica sobre el eje vertical.
     """
     distance = np.concatenate([[0.0], np.cumsum(np.abs(np.diff(y)))])
 
@@ -153,9 +153,9 @@ def _build_dataframe_vertical(
         {
             "frame": np.arange(len(t)),
             "time_s": t,
-            "x_m": np.zeros_like(t),  # no horizontal displacement
-            "y_m": y,  # vertical position (height)
-            "position_m": y,  # resultant position = height for 1-D fall
+            "x_m": np.zeros_like(t),  # sin desplazamiento horizontal
+            "y_m": y,  # posición vertical (altura)
+            "position_m": y,  # posición resultante = altura para caída 1-D
             "distance_m": distance,
             "vx_m_s": np.zeros_like(t),
             "vy_m_s": vy,
