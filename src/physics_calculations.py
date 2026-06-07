@@ -1,11 +1,11 @@
 """
-Kinematics calculations: position, velocity, acceleration, distance.
+Cálculos cinemáticos: posición, velocidad, aceleración, distancia.
 
-Coordinate convention
----------------------
-Video frames have origin at top-left with Y increasing downward.
-For physics analysis the caller should invert Y before passing data so that
-positive Y means upward (standard physics convention).
+Convención de coordenadas
+-------------------------
+Los frames de video tienen origen en la esquina superior izquierda con Y creciente
+hacia abajo. Para el análisis físico, el llamador debe invertir Y antes de pasar los
+datos, de modo que Y positivo apunte hacia arriba (convenio físico estándar).
 """
 
 from __future__ import annotations
@@ -17,9 +17,9 @@ from src.utils import safe_divide, smooth_series
 
 
 def build_time_array(n_frames: int, fps: float) -> np.ndarray:
-    """Return array of time stamps [s] for n_frames at given fps."""
+    """Retorna el arreglo de marcas de tiempo [s] para n_frames a los fps indicados."""
     if fps <= 0:
-        raise ValueError("FPS must be positive.")
+        raise ValueError("Los FPS deben ser positivos.")
     return np.arange(n_frames) / fps
 
 
@@ -29,16 +29,16 @@ def compute_positions(
     meters_per_pixel: float | None,
 ) -> pd.DataFrame:
     """
-    Convert raw pixel positions to a DataFrame with optional meter conversion.
+    Convierte posiciones crudas en píxeles a un DataFrame con conversión a metros opcional.
 
-    Parameters
+    Parámetros
     ----------
-    x_pixels, y_pixels : lists with None for undetected frames.
-    meters_per_pixel   : calibration factor; None means keep pixel units.
+    x_pixels, y_pixels : listas con None para los frames sin detección.
+    meters_per_pixel   : factor de calibración; None conserva las unidades en píxeles.
 
-    Returns
+    Retorna
     -------
-    DataFrame with columns: x_px, y_px, x_m, y_m
+    DataFrame con columnas: x_px, y_px, x_m, y_m
     """
     x_arr = np.array([v if v is not None else np.nan for v in x_pixels], dtype=float)
     y_arr = np.array([v if v is not None else np.nan for v in y_pixels], dtype=float)
@@ -57,8 +57,8 @@ def compute_positions(
 
 def compute_distance(x: pd.Series, y: pd.Series) -> pd.Series:
     """
-    Cumulative arc-length distance along the trajectory.
-    NaN positions contribute 0 distance (object not detected).
+    Distancia acumulada como longitud de arco a lo largo de la trayectoria.
+    Las posiciones NaN aportan 0 distancia (objeto no detectado en ese frame).
     """
     dx = x.diff().fillna(0.0)
     dy = y.diff().fillna(0.0)
@@ -68,17 +68,17 @@ def compute_distance(x: pd.Series, y: pd.Series) -> pd.Series:
 
 def compute_velocity(position: pd.Series, time: np.ndarray, smooth_window: int = 3) -> pd.Series:
     """
-    Instantaneous velocity via central finite differences [units/s].
+    Velocidad instantánea mediante diferencias finitas centrales [unidades/s].
 
-    Parameters
+    Parámetros
     ----------
-    position     : 1-D series (x, y, or resultant) in meters or pixels.
-    time         : matching time array in seconds.
-    smooth_window: rolling-mean window applied to position before differentiation.
+    position     : serie 1-D (x, y o resultante) en metros o píxeles.
+    time         : arreglo de tiempo correspondiente en segundos.
+    smooth_window: ventana de media móvil aplicada a la posición antes de derivar.
     """
     pos_smooth = smooth_series(position, window=smooth_window)
-    dt = np.diff(time, prepend=time[0])  # same length as position
-    dt[0] = dt[1] if len(dt) > 1 else 1.0  # avoid zero at start
+    dt = np.diff(time, prepend=time[0])  # misma longitud que position
+    dt[0] = dt[1] if len(dt) > 1 else 1.0  # evita división por cero al inicio
 
     dp = pos_smooth.diff().fillna(0.0).values
     vel = np.array([safe_divide(dp[i], dt[i]) for i in range(len(dp))])
@@ -92,11 +92,11 @@ def compute_velocity_2d(
     smooth_window: int = 3,
 ) -> tuple[pd.Series, pd.Series, pd.Series]:
     """
-    Compute vx, vy and resultant speed |v| = sqrt(vx² + vy²).
+    Calcula vx, vy y la rapidez resultante |v| = sqrt(vx² + vy²).
 
-    Returns
+    Retorna
     -------
-    vx, vy, speed  — all as pandas Series.
+    vx, vy, speed — todas como pandas Series.
     """
     vx = compute_velocity(x, time, smooth_window)
     vy = compute_velocity(y, time, smooth_window)
@@ -109,8 +109,8 @@ def compute_acceleration(
     velocity: pd.Series, time: np.ndarray, smooth_window: int = 5
 ) -> pd.Series:
     """
-    Instantaneous acceleration via central finite differences [units/s²].
-    Acceleration is inherently noisier, so a wider default smooth_window is used.
+    Aceleración instantánea mediante diferencias finitas centrales [unidades/s²].
+    La aceleración es inherentemente más ruidosa, por eso se usa una ventana más amplia.
     """
     vel_smooth = smooth_series(velocity, window=smooth_window)
     dt = np.diff(time, prepend=time[0])
@@ -125,9 +125,9 @@ def compute_summary_stats(
     velocity: pd.Series, acceleration: pd.Series, distance: pd.Series
 ) -> dict[str, float]:
     """
-    Aggregate statistics for display as metric cards.
+    Estadísticas agregadas para mostrar como tarjetas de métricas.
 
-    Returns dict with keys: avg_velocity, max_velocity, avg_acceleration,
+    Retorna dict con claves: avg_velocity, max_velocity, avg_acceleration,
     max_acceleration, total_distance.
     """
     valid_v = velocity.dropna()
@@ -157,7 +157,7 @@ def build_results_dataframe(
     movement_type: str,
     calibrated: bool,
 ) -> pd.DataFrame:
-    """Assemble a tidy export DataFrame."""
+    """Construye el DataFrame de exportación con todas las variables cinemáticas."""
     pos_col = "position_m" if calibrated else "position_px"
     pos_vals = np.sqrt(x_m**2 + y_m**2) if calibrated else np.sqrt(x_px**2 + y_px**2)
 

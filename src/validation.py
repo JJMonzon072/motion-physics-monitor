@@ -1,7 +1,7 @@
 """
-Validation: compare experimental results against theoretical values.
+Validación: compara resultados experimentales contra valores teóricos.
 
-Computes absolute error, percent error and returns a structured report.
+Calcula el error absoluto, el error porcentual y retorna un reporte estructurado.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ def validate_single(
     experimental: float,
     unit: str = "",
 ) -> ValidationResult:
-    """Compare one experimental measurement against its theoretical value."""
+    """Compara una medición experimental contra su valor teórico."""
     if abs(theoretical) < 1e-12:
         abs_err = abs(experimental - theoretical)
         pct_err = 0.0 if abs_err < 1e-12 else float("inf")
@@ -63,7 +63,7 @@ def validate_single(
 
 
 def validate_mru(theoretical_velocity: float, experimental_velocity: float) -> ValidationResult:
-    """Validate MRU: compare average velocities."""
+    """Valida MRU: compara las velocidades promedio."""
     return validate_single(
         variable="Velocidad promedio (MRU)",
         theoretical=theoretical_velocity,
@@ -75,7 +75,7 @@ def validate_mru(theoretical_velocity: float, experimental_velocity: float) -> V
 def validate_mruv(
     theoretical_acceleration: float, experimental_acceleration: float
 ) -> ValidationResult:
-    """Validate MRUV: compare average accelerations."""
+    """Valida MRUV: compara las aceleraciones promedio."""
     return validate_single(
         variable="Aceleración promedio (MRUV)",
         theoretical=theoretical_acceleration,
@@ -85,7 +85,7 @@ def validate_mruv(
 
 
 def validate_free_fall(experimental_acceleration: float) -> ValidationResult:
-    """Validate free fall: compare experimental vertical acceleration against g."""
+    """Valida caída libre: compara la aceleración vertical experimental contra g."""
     return validate_single(
         variable="Aceleración gravitacional (Caída Libre)",
         theoretical=GRAVITY,
@@ -95,7 +95,7 @@ def validate_free_fall(experimental_acceleration: float) -> ValidationResult:
 
 
 def results_to_dataframe(results: list[ValidationResult]) -> pd.DataFrame:
-    """Convert a list of ValidationResult into a display-ready DataFrame."""
+    """Convierte una lista de ValidationResult en un DataFrame listo para mostrar."""
     rows = [
         {
             "Variable": r.variable,

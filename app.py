@@ -1,8 +1,8 @@
 """
 Sistema de Monitoreo de Movimiento y Análisis Físico en Tiempo Real
-Universidad Mariano Gálvez — Física 1
+Universidad Mariano Gálvez — Física 1 — Juan José Monzón
 
-Run with: streamlit run app.py
+Ejecutar con: streamlit run app.py
 """
 
 from __future__ import annotations
@@ -299,11 +299,12 @@ st.markdown(
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 def _s(df: pd.DataFrame, col: str) -> pd.Series:
-    """Return df[col] as pd.Series; silences Pyright's Series|DataFrame ambiguity."""
+    """Retorna df[col] como pd.Series; silencia la ambigüedad Series|DataFrame de Pyright."""
     return pd.Series(df[col])
 
 
 def page_header(title: str, subtitle: str = "") -> None:
+    """Renderiza un encabezado de página estilizado con título y subtítulo opcional."""
     sub = f"<div class='subtitle'>{subtitle}</div>" if subtitle else ""
     st.markdown(
         f"<div class='page-header'>" f"<div class='title'>{title}</div>{sub}" f"</div>",
@@ -312,6 +313,7 @@ def page_header(title: str, subtitle: str = "") -> None:
 
 
 def notice(text: str, kind: str = "info") -> None:
+    """Renderiza un cuadro de aviso estilizado. kind: 'info' | 'warn' | 'ok' | 'error'."""
     cls = {
         "info": "notice-info",
         "warn": "notice-warn",
@@ -322,6 +324,7 @@ def notice(text: str, kind: str = "info") -> None:
 
 
 def metric_card(label: str, value: str, unit: str = "", accent: int = 1) -> None:
+    """Renderiza una tarjeta KPI con etiqueta, valor y unidad opcional. accent elige el color (1–4)."""
     st.markdown(
         f"<div class='metric-card mc-accent-{accent}'>"
         f"<div class='mc-label'>{label}</div>"
@@ -333,15 +336,18 @@ def metric_card(label: str, value: str, unit: str = "", accent: int = 1) -> None
 
 
 def section_label(text: str) -> None:
+    """Renderiza una etiqueta divisora de sección en mayúsculas."""
     st.markdown(f"<div class='section-label'>{text}</div>", unsafe_allow_html=True)
 
 
 def spacer(px: int = 16) -> None:
+    """Inserta un espacio vertical en blanco de px píxeles."""
     st.markdown(f"<div style='height:{px}px'></div>", unsafe_allow_html=True)
 
 
 # ── session state ─────────────────────────────────────────────────────────────
 def _init_state() -> None:
+    """Inicializa las claves de session_state con valores por defecto en la primera carga."""
     defaults: dict = {
         "results_df": None,
         "video_info": None,
