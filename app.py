@@ -42,6 +42,19 @@ st.markdown(
         color: #1E293B !important;
     }
 
+    /* ── Forzar fondo claro en el área principal (evita tema oscuro del sistema) ── */
+    html, body { background-color: #F8FAFC !important; }
+    [data-testid="stApp"],
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    [data-testid="stMain"] > div,
+    section.main,
+    .main .block-container,
+    .block-container { background-color: #F8FAFC !important; }
+
+    /* ── Header oscuro que Streamlit Cloud muestra ── */
+    [data-testid="stHeader"] { background-color: #F8FAFC !important; border-bottom: 1px solid #E2E8F0 !important; }
+
     /* ── Sidebar base ── */
     [data-testid="stSidebar"] {
         background: #0F172A !important;
