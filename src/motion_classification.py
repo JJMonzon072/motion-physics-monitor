@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 
 GRAVITY = 9.8  # m/s²
-FREE_FALL_TOLERANCE = 0.25  # fraction: experimental g must be within 25 % of 9.8
-MRU_ACCEL_THRESHOLD = 0.05  # max normalised std of acceleration to call it MRU
+FREE_FALL_TOLERANCE = 0.35  # fraction: experimental g must be within 35% of 9.8
+MRU_ACCEL_THRESHOLD = 0.15  # max CV of speed to call it MRU (real video is noisy)
 
 
 @dataclass
@@ -112,8 +112,8 @@ def classify_motion(
             # Parabolic fit clearly better than linear → likely free fall.
             # Threshold 0.05 accounts for the fact that a parabola can have
             # R²_linear ≈ 0.93 even for a clean quadratic curve.
-            if r2_y_quad > 0.92 and (r2_y_quad - r2_y_lin) > 0.05:
-                conf = "Alta" if r2_y_quad > 0.97 else "Media"
+            if r2_y_quad > 0.75 and (r2_y_quad - r2_y_lin) > 0.02:
+                conf = "Alta" if r2_y_quad > 0.92 else "Media"
                 return ClassificationResult(
                     movement_type="Caída Libre",
                     confidence=conf,
@@ -151,8 +151,8 @@ def classify_motion(
         )
 
     # MRUV: constant acceleration → velocity is linear, position is quadratic
-    if r2_vel_linear > 0.85 and r2_pos_quad > 0.85:
-        conf = "Alta" if (r2_vel_linear > 0.92 and r2_pos_quad > 0.92) else "Media"
+    if r2_vel_linear > 0.75 and r2_pos_quad > 0.75:
+        conf = "Alta" if (r2_vel_linear > 0.90 and r2_pos_quad > 0.90) else "Media"
         return ClassificationResult(
             movement_type="MRUV",
             confidence=conf,
